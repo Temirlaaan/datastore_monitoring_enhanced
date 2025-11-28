@@ -1,0 +1,12 @@
+2025-07-29 13:18:19,293 [INFO] __main__: Starting datastore monitor...
+2025-07-29 13:18:19,293 [INFO] __main__: Config: Critical=90%, Warning=80%, Interval=3600s
+2025-07-29 13:18:19,294 [INFO] __main__: Refreshing token (attempt 1)
+2025-07-29 13:18:29,308 [WARNING] __main__: Token refresh attempt 1 failed: HTTPSConnectionPool(host='vcd02.t-cloud.kz', port=443): Max retries exceeded with url: /oauth/provider/token?grant_type=refresh_token&refresh_token=bdBTm6zUxZ08Kzl51JcHUdpXuQw6443t (Caused by ConnectTimeoutError(<urllib3.connection.HTTPSConnection object at 0x7036fc3d48f0>, 'Connection to vcd02.t-cloud.kz timed out. (connect timeout=10)'))
+2025-07-29 13:18:34,314 [INFO] __main__: Refreshing token (attempt 2)
+2025-07-29 13:18:44,330 [WARNING] __main__: Token refresh attempt 2 failed: HTTPSConnectionPool(host='vcd02.t-cloud.kz', port=443): Max retries exceeded with url: /oauth/provider/token?grant_type=refresh_token&refresh_token=bdBTm6zUxZ08Kzl51JcHUdpXuQw6443t (Caused by ConnectTimeoutError(<urllib3.connection.HTTPSConnection object at 0x7036fc1e39b0>, 'Connection to vcd02.t-cloud.kz timed out. (connect timeout=10)'))
+2025-07-29 13:27:21,255 [INFO] __main__: Starting datastore monitor...
+2025-07-29 13:27:21,255 [INFO] __main__: Config: Critical=90%, Warning=80%, Interval=3600s
+2025-07-29 13:27:21,256 [INFO] __main__: Refreshing token (attempt 1)
+2025-07-29 13:27:21,903 [INFO] __main__: Token refreshed successfully (expires in 86400s)
+2025-07-29 13:27:22,130 [INFO] __main__: Retrieved 10 datastores
+2025-07-29 13:27:23,795 [INFO] __main__: Checked 10 datastores, sent 5 alerts
