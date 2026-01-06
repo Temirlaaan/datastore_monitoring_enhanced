@@ -520,13 +520,17 @@ class MultiCloudDatastoreMonitor:
                     by_cloud[ds.cloud_name][ds.container_name] = []
                 by_cloud[ds.cloud_name][ds.container_name].append(ds)
 
-            report_lines = ["📋 *Daily Datastore Report*"]
+            # Send header
+            total_all = len(datastores)
+            await self.notifier.send_message(f"📋 *Daily Datastore Report*\n\n📊 Total: {total_all} datastores across {len(by_cloud)} clouds")
 
+            # Send one message per cloud
             for cloud_name in sorted(by_cloud.keys()):
                 cloud_containers = by_cloud[cloud_name]
                 total_ds = sum(len(ds_list) for ds_list in cloud_containers.values())
 
-                report_lines.append(f"\n━━━━━━━━━━━━━━━━━━━━━━━━")
+                report_lines = []
+                report_lines.append(f"━━━━━━━━━━━━━━━━━━━━━━━━")
                 report_lines.append(f"☁️ *{cloud_name}* ({total_ds} datastores)")
                 report_lines.append(f"━━━━━━━━━━━━━━━━━━━━━━━━")
 
@@ -551,9 +555,10 @@ class MultiCloudDatastoreMonitor:
                             f"   {status_emoji} {safe_name}: {used_tb:.1f}/{total_tb:.1f} TB ({ds.usage_percent:.1f}%)"
                         )
 
-            report_lines.append(f"\n🕐 *Time:* {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+                await self.notifier.send_message("\n".join(report_lines))
 
-            await self.notifier.send_message("\n".join(report_lines))
+            # Send footer with timestamp
+            await self.notifier.send_message(f"🕐 *Time:* {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
             logger.info("Daily report sent")
 
         except Exception as e:
