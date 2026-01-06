@@ -218,9 +218,11 @@ class VCDDatastoreClient:
                             logger.warning(f"[{self.cloud_config.name}] 401 error, will retry with fresh token")
                             continue
 
-                        if response.status == 404:
-                            # Container might not have nested datastores
-                            logger.debug(f"[{self.cloud_config.name}] No datastores endpoint for {container.name}")
+                        if response.status in (400, 404):
+                            # Container doesn't have nested datastores endpoint
+                            # 400 = Bad Request (endpoint not valid for this container type)
+                            # 404 = Not Found
+                            logger.debug(f"[{self.cloud_config.name}] No datastores endpoint for {container.name} (status {response.status})")
                             return []
 
                         response.raise_for_status()
