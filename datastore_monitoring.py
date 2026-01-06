@@ -529,6 +529,11 @@ class MultiCloudDatastoreMonitor:
                    f"Warning={self.config.warning_threshold}%, "
                    f"Interval={self.config.check_interval}s")
 
+        # Send initial status report on startup
+        logger.info("Sending initial status report...")
+        await self.send_daily_report()
+        self.last_daily_report = datetime.now().day
+
         while True:
             try:
                 # Check datastores
