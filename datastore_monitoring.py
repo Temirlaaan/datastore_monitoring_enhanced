@@ -505,41 +505,51 @@ class MultiCloudDatastoreMonitor:
         await self.notifier.send_message(message)
 
     async def send_daily_report(self):
-        """Send daily status report grouped by cloud"""
+        """Send daily status report grouped by cloud and storage container"""
         try:
             datastores = await self.get_all_datastores()
             if not datastores:
                 return
 
-            # Group by cloud
-            by_cloud: Dict[str, List[DatastoreInfo]] = {}
+            # Group by cloud -> container -> datastores
+            by_cloud: Dict[str, Dict[str, List[DatastoreInfo]]] = {}
             for ds in datastores:
                 if ds.cloud_name not in by_cloud:
-                    by_cloud[ds.cloud_name] = []
-                by_cloud[ds.cloud_name].append(ds)
+                    by_cloud[ds.cloud_name] = {}
+                if ds.container_name not in by_cloud[ds.cloud_name]:
+                    by_cloud[ds.cloud_name][ds.container_name] = []
+                by_cloud[ds.cloud_name][ds.container_name].append(ds)
 
-            report_lines = ["📋 *Daily Datastore Report*\n"]
+            report_lines = ["📋 *Daily Datastore Report*"]
 
             for cloud_name in sorted(by_cloud.keys()):
-                cloud_datastores = by_cloud[cloud_name]
-                report_lines.append(f"\n☁️ *{cloud_name}* ({len(cloud_datastores)} datastores):")
+                cloud_containers = by_cloud[cloud_name]
+                total_ds = sum(len(ds_list) for ds_list in cloud_containers.values())
 
-                # Sort by usage percent descending
-                cloud_datastores.sort(key=lambda x: x.usage_percent, reverse=True)
+                report_lines.append(f"\n━━━━━━━━━━━━━━━━━━━━━━━━")
+                report_lines.append(f"☁️ *{cloud_name}* ({total_ds} datastores)")
+                report_lines.append(f"━━━━━━━━━━━━━━━━━━━━━━━━")
 
-                for ds in cloud_datastores:
-                    _, emoji = self._get_alert_level(ds.usage_percent)
-                    status_emoji = emoji if emoji else "🟢"
+                for container_name in sorted(cloud_containers.keys()):
+                    container_datastores = cloud_containers[container_name]
 
-                    total_tb = ds.total_mb / 1_048_576
-                    used_tb = ds.used_mb / 1_048_576
+                    # Sort by usage percent descending
+                    container_datastores.sort(key=lambda x: x.usage_percent, reverse=True)
 
-                    # Escape special characters in datastore name
-                    safe_name = TelegramNotifier.escape_markdown(ds.name)
-                    report_lines.append(
-                        f"  {status_emoji} {safe_name}: {used_tb:.1f}/{total_tb:.1f} TB "
-                        f"({ds.usage_percent:.1f}%)"
-                    )
+                    safe_container = TelegramNotifier.escape_markdown(container_name)
+                    report_lines.append(f"\n📦 *{safe_container}*")
+
+                    for ds in container_datastores:
+                        _, emoji = self._get_alert_level(ds.usage_percent)
+                        status_emoji = emoji if emoji else "🟢"
+
+                        total_tb = ds.total_mb / 1_048_576
+                        used_tb = ds.used_mb / 1_048_576
+
+                        safe_name = TelegramNotifier.escape_markdown(ds.name)
+                        report_lines.append(
+                            f"   {status_emoji} {safe_name}: {used_tb:.1f}/{total_tb:.1f} TB ({ds.usage_percent:.1f}%)"
+                        )
 
             report_lines.append(f"\n🕐 *Time:* {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
