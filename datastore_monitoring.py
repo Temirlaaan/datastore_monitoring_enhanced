@@ -311,6 +311,15 @@ class TelegramNotifier:
         self.chat_id = chat_id
         self.base_url = f"https://api.telegram.org/bot{bot_token}"
 
+    @staticmethod
+    def escape_markdown(text: str) -> str:
+        """Escape special characters for Telegram Markdown"""
+        # Characters that need escaping in Markdown V1: _ * ` [
+        special_chars = ['_', '*', '`', '[', ']', '(', ')']
+        for char in special_chars:
+            text = text.replace(char, f'\\{char}')
+        return text
+
     async def send_message(self, text: str, parse_mode: str = "Markdown") -> bool:
         """Send message to Telegram"""
         url = f"{self.base_url}/sendMessage"
@@ -330,6 +339,15 @@ class TelegramNotifier:
                     else:
                         error_text = await response.text()
                         logger.error(f"Telegram API error: {response.status} - {error_text}")
+                        # Fallback: try sending without Markdown if parsing failed
+                        if response.status == 400 and 'parse entities' in error_text:
+                            logger.info("Retrying without Markdown formatting...")
+                            payload['parse_mode'] = None
+                            del payload['parse_mode']
+                            async with session.post(url, json=payload) as retry_response:
+                                if retry_response.status == 200:
+                                    logger.debug("Telegram message sent (plain text)")
+                                    return True
                         return False
 
         except Exception as e:
@@ -447,16 +465,21 @@ class MultiCloudDatastoreMonitor:
 
     async def _send_alert(self, ds: DatastoreInfo, alert_level: str, emoji: str):
         """Send alert message"""
+        # Escape special characters in names
+        safe_name = TelegramNotifier.escape_markdown(ds.name)
+        safe_container = TelegramNotifier.escape_markdown(ds.container_name)
+        safe_type = TelegramNotifier.escape_markdown(ds.datastore_type)
+
         message = (
             f"{emoji} *{alert_level}*: Datastore filling up!\n\n"
             f"☁️ *Cloud:* {ds.cloud_name}\n"
-            f"📁 *Datastore:* {ds.name}\n"
-            f"📦 *Container:* {ds.container_name}\n"
+            f"📁 *Datastore:* {safe_name}\n"
+            f"📦 *Container:* {safe_container}\n"
             f"📊 *Used:* {self._format_storage_size(ds.used_mb)} / "
             f"{self._format_storage_size(ds.total_mb)} ({ds.usage_percent:.1f}%)\n"
             f"📈 *Provisioned:* {self._format_storage_size(ds.provisioned_mb)} "
             f"({ds.provisioned_percent:.1f}%)\n"
-            f"💾 *Type:* {ds.datastore_type}\n"
+            f"💾 *Type:* {safe_type}\n"
             f"🆔 *ID:* `{ds.id}`\n"
             f"🕐 *Time:* {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
         )
@@ -465,11 +488,15 @@ class MultiCloudDatastoreMonitor:
 
     async def _send_recovery_message(self, ds: DatastoreInfo):
         """Send recovery message"""
+        # Escape special characters in names
+        safe_name = TelegramNotifier.escape_markdown(ds.name)
+        safe_container = TelegramNotifier.escape_markdown(ds.container_name)
+
         message = (
             f"✅ *RECOVERED*: Datastore back to normal\n\n"
             f"☁️ *Cloud:* {ds.cloud_name}\n"
-            f"📁 *Datastore:* {ds.name}\n"
-            f"📦 *Container:* {ds.container_name}\n"
+            f"📁 *Datastore:* {safe_name}\n"
+            f"📦 *Container:* {safe_container}\n"
             f"📊 *Used:* {self._format_storage_size(ds.used_mb)} / "
             f"{self._format_storage_size(ds.total_mb)} ({ds.usage_percent:.1f}%)\n"
             f"🕐 *Time:* {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
@@ -507,8 +534,10 @@ class MultiCloudDatastoreMonitor:
                     total_tb = ds.total_mb / 1_048_576
                     used_tb = ds.used_mb / 1_048_576
 
+                    # Escape special characters in datastore name
+                    safe_name = TelegramNotifier.escape_markdown(ds.name)
                     report_lines.append(
-                        f"  {status_emoji} {ds.name}: {used_tb:.1f}/{total_tb:.1f} TB "
+                        f"  {status_emoji} {safe_name}: {used_tb:.1f}/{total_tb:.1f} TB "
                         f"({ds.usage_percent:.1f}%)"
                     )
 
