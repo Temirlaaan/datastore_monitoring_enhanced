@@ -571,15 +571,16 @@ def load_cloud_configs() -> List[CloudConfig]:
             logger.warning(f"Skipping cloud '{cloud_name}': missing URL or API_TOKEN")
             continue
 
-        # Parse storage containers: "id1:name1,id2:name2,..."
+        # Parse storage containers: "id1|name1,id2|name2,..."
+        # Using | as separator because IDs contain colons (urn:vcloud:storagecontainer:...)
         storage_containers = []
         for container_entry in containers_str.split(','):
             container_entry = container_entry.strip()
             if not container_entry:
                 continue
 
-            if ':' in container_entry:
-                container_id, container_name = container_entry.split(':', 1)
+            if '|' in container_entry:
+                container_id, container_name = container_entry.split('|', 1)
             else:
                 container_id = container_entry
                 container_name = container_entry  # Use ID as name if no name provided
