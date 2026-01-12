@@ -230,6 +230,11 @@ class VCDDatastoreClient:
                             logger.debug(f"[{self.cloud_config.name}] No datastores endpoint for {container.name} (status {response.status})")
                             return []
 
+                        if response.status == 403:
+                            # No permission to access this container - skip without retry
+                            logger.warning(f"[{self.cloud_config.name}] No access to {container.name} (403 Forbidden) - skipping")
+                            return []
+
                         response.raise_for_status()
                         data = await response.json()
 
@@ -281,6 +286,10 @@ class VCDDatastoreClient:
                         if response.status == 401 and attempt < 2:
                             logger.warning(f"[{self.cloud_config.name}] 401 error, will retry with fresh token")
                             continue
+
+                        if response.status == 403:
+                            # No permission - already logged in _fetch_container_datastores
+                            return None
 
                         response.raise_for_status()
                         data = await response.json()
