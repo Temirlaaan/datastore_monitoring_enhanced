@@ -78,6 +78,11 @@ class AlertConfig:
     check_interval: int = 3600  # 1 hour
     daily_report_hour: int = 9
     alert_cooldown: int = 7200  # 2 hours
+    critical_only_containers: List[str] = None  # Containers that only get CRITICAL alerts (no WARNING)
+
+    def __post_init__(self):
+        if self.critical_only_containers is None:
+            self.critical_only_containers = []
 
 class TokenManager:
     """Handles VCD API token management"""
@@ -385,11 +390,14 @@ class MultiCloudDatastoreMonitor:
         else:
             return f"{mb:.2f} MB"
 
-    def _get_alert_level(self, usage_percent: float) -> tuple[Optional[str], Optional[str]]:
+    def _get_alert_level(self, usage_percent: float, container_name: str = "") -> tuple[Optional[str], Optional[str]]:
         """Determine alert level and emoji"""
         if usage_percent >= self.config.critical_threshold:
             return "CRITICAL", "🔴"
         elif usage_percent >= self.config.warning_threshold:
+            # Check if this container should only get CRITICAL alerts
+            if container_name in self.config.critical_only_containers:
+                return None, None  # Skip WARNING for this container
             return "WARNING", "🟡"
         else:
             return None, None
@@ -434,7 +442,7 @@ class MultiCloudDatastoreMonitor:
 
             for ds in datastores:
                 cache_key = f"{ds.cloud_name}_{ds.id}"
-                alert_level, emoji = self._get_alert_level(ds.usage_percent)
+                alert_level, emoji = self._get_alert_level(ds.usage_percent, ds.container_name)
 
                 # Handle alerts
                 if alert_level and await self._should_send_alert(ds, alert_level):
@@ -674,13 +682,21 @@ async def main():
         logger.error("No valid cloud configurations found")
         return 1
 
+    # Parse critical-only containers (containers that only get CRITICAL alerts, no WARNING)
+    critical_only_str = os.getenv('CRITICAL_ONLY_CONTAINERS', '')
+    critical_only_containers = [c.strip() for c in critical_only_str.split(',') if c.strip()]
+
     # Create alert configuration
     alert_config = AlertConfig(
         critical_threshold=int(os.getenv('CRITICAL_THRESHOLD', '90')),
         warning_threshold=int(os.getenv('WARNING_THRESHOLD', '80')),
         check_interval=int(os.getenv('CHECK_INTERVAL', '3600')),
-        daily_report_hour=int(os.getenv('DAILY_REPORT_HOUR', '9'))
+        daily_report_hour=int(os.getenv('DAILY_REPORT_HOUR', '9')),
+        critical_only_containers=critical_only_containers
     )
+
+    if critical_only_containers:
+        logger.info(f"Critical-only containers (no WARNING alerts): {', '.join(critical_only_containers)}")
 
     # Create notifier
     notifier = TelegramNotifier(
