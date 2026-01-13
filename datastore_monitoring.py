@@ -561,7 +561,7 @@ class MultiCloudDatastoreMonitor:
                     report_lines.append(f"\n📦 *{safe_container}*")
 
                     for ds in container_datastores:
-                        _, emoji = self._get_alert_level(ds.usage_percent)
+                        _, emoji = self._get_alert_level(ds.usage_percent, ds.container_name)
                         status_emoji = emoji if emoji else "🟢"
 
                         total_tb = ds.total_mb / 1_048_576
